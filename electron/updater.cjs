@@ -40,30 +40,18 @@ function publishState(patch) {
   return state;
 }
 
-function getHeaders() {
-  const headers = {
-    Accept: "application/vnd.github+json",
-    "User-Agent": "Opitkovanie-AI-Studio",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
-  // GitHub Releases in a private repository require a user-provided token.
-  // Never place a token in the application bundle or source code.
-  if (process.env.GH_TOKEN) headers.Authorization = `Bearer ${process.env.GH_TOKEN}`;
-  return headers;
-}
-
 function fetchReleaseHistory() {
   return new Promise((resolve, reject) => {
     const request = net.request({ method: "GET", url: RELEASES_API_URL });
-    for (const [name, value] of Object.entries(getHeaders())) request.setHeader(name, value);
+    request.setHeader("Accept", "application/vnd.github+json");
+    request.setHeader("User-Agent", "Opitkovanie-AI-Studio");
+    request.setHeader("X-GitHub-Api-Version", "2022-11-28");
     let body = "";
     request.on("response", (response) => {
       response.on("data", (chunk) => { body += chunk.toString(); });
       response.on("end", () => {
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          reject(new Error(response.statusCode === 404
-            ? "Brak dostępu do prywatnych wydań GitHub. Ustaw GH_TOKEN na komputerze użytkownika."
-            : `GitHub Releases zwrócił HTTP ${response.statusCode}.`));
+          reject(new Error(`GitHub Releases zwrócił HTTP ${response.statusCode}.`));
           return;
         }
         try {

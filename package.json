@@ -1,7 +1,7 @@
 {
   "name": "opitkovanie-ai-studio",
   "private": true,
-  "version": "6.0.0",
+  "version": "6.0.1",
   "description": "Opitkovanie AI Studio – dubbing, shorty, napisy, muzyka, obraz i wideo lokalnie.",
   "author": "Opitkovanie",
   "repository": {
@@ -33,7 +33,6 @@
         "provider": "github",
         "owner": "Opitkovanie",
         "repo": "Opitkovanie-AI-Studio",
-        "private": true,
         "releaseType": "release"
       }
     ],
