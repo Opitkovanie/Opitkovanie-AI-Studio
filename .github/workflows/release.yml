@@ -56,11 +56,14 @@ jobs:
       - name: Build installers and update metadata
         run: npm run release
 
+      - name: Prepare readable release notes
+        run: node scripts/generate-release-notes.cjs "${{ inputs.version || github.ref_name }}" > release/RELEASE_NOTES.md
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
-          generate_release_notes: true
+          body_path: release/RELEASE_NOTES.md
           files: |
             release/*.dmg
             release/*.zip

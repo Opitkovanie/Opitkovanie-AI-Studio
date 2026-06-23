@@ -1162,7 +1162,11 @@ button {
 .update-versions b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .update-section { margin-top: 18px; }
 .update-section h3 { margin: 0 0 8px; font-size: 13px; }
-.update-notes { max-height: 160px; margin: 0; padding: 12px; overflow: auto; white-space: pre-wrap; font: 12px/1.55 inherit; color: var(--muted); border: 1px solid var(--line); border-radius: 9px; background: rgba(0, 0, 0, .16); }
+.update-notes, .update-notes-empty { display: grid; gap: 8px; max-height: 160px; margin: 0; padding: 12px; overflow: auto; font: 12px/1.55 inherit; color: var(--muted); border: 1px solid var(--line); border-radius: 9px; background: rgba(0, 0, 0, .16); }
+.update-notes strong { color: var(--text); font-size: 12px; }
+.update-notes p { margin: 0; }
+.update-note-item { position: relative; padding-left: 14px; }
+.update-note-item::before { content: '•'; position: absolute; left: 1px; color: var(--accent-2); }
 .update-history { display: grid; gap: 8px; max-height: 210px; overflow: auto; }
 .update-history article { padding: 10px 12px; border-left: 2px solid rgba(139, 91, 255, .65); border-radius: 0 8px 8px 0; background: var(--panel-2); }
 .update-history article div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }

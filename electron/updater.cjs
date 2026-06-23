@@ -20,8 +20,29 @@ let isConfigured = false;
 let emitState = () => {};
 
 function normaliseNotes(notes) {
-  if (Array.isArray(notes)) return notes.map((note) => note.note || "").filter(Boolean).join("\n\n");
-  return notes || "";
+  const raw = Array.isArray(notes) ? notes.map((note) => note.note || "").filter(Boolean).join("\n\n") : notes || "";
+  return String(raw)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line && !/full changelog|github\.com\/.*\/compare\//i.test(line))
+    .join("\n")
+    .trim();
+}
+
+function userFacingUpdateError(error) {
+  const message = error?.message || String(error || "");
+  if (/code signature.*(?:failed|validation)|did not pass validation/i.test(message)) {
+    return "Aktualizacja została pobrana, ale macOS odrzucił jej podpis. Aby automatyczna instalacja działała na wszystkich Macach, wydanie musi być podpisane certyfikatem Apple Developer ID.";
+  }
+  return message || "Nie udało się pobrać aktualizacji.";
 }
 
 function releaseSummary(release) {
@@ -29,7 +50,7 @@ function releaseSummary(release) {
     version: String(release.tag_name || release.name || "").replace(/^v/i, ""),
     name: release.name || release.tag_name || "",
     publishedAt: release.published_at || null,
-    notes: release.body || "",
+    notes: normaliseNotes(release.body),
     url: release.html_url || "",
   };
 }
@@ -84,7 +105,9 @@ function configureUpdater(onState) {
   isConfigured = true;
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.fullChangelog = true;
+  // The history below already lists older releases. Keeping this false means the
+  // headline notes describe only the update the user is about to install.
+  autoUpdater.fullChangelog = false;
 
   autoUpdater.on("checking-for-update", () => publishState({ status: "checking", message: "Sprawdzam dostępność aktualizacji…", progress: null }));
   autoUpdater.on("update-available", (info) => publishState({
@@ -114,7 +137,7 @@ function configureUpdater(onState) {
     progress: 100,
     message: "Aktualizacja pobrana. Aplikacja uruchomi się ponownie.",
   }));
-  autoUpdater.on("error", (error) => publishState({ status: "error", message: error.message || "Nie udało się sprawdzić aktualizacji.", progress: null }));
+  autoUpdater.on("error", (error) => publishState({ status: "error", message: userFacingUpdateError(error), progress: null }));
 }
 
 async function checkForUpdates() {
@@ -124,7 +147,7 @@ async function checkForUpdates() {
   try {
     await autoUpdater.checkForUpdates();
   } catch (error) {
-    publishState({ status: "error", message: error.message || "Nie udało się sprawdzić aktualizacji." });
+    publishState({ status: "error", message: userFacingUpdateError(error) });
   }
   return state;
 }
@@ -136,7 +159,7 @@ async function downloadAndInstall() {
     await autoUpdater.downloadUpdate();
     autoUpdater.quitAndInstall();
   } catch (error) {
-    publishState({ status: "error", message: error.message || "Nie udało się pobrać aktualizacji." });
+    publishState({ status: "error", message: userFacingUpdateError(error) });
   }
   return state;
 }

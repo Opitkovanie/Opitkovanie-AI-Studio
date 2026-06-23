@@ -50,6 +50,23 @@ function formatReleaseDate(value: string | null): string {
   return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' }).format(date)
 }
 
+function releaseSummary(notes: string): string {
+  const line = String(notes || '').split('\n')
+    .map((item) => item.replace(/^[-*]\s*/, '').trim())
+    .find((item) => item && !item.startsWith('#') && !/^aktualizacja$/i.test(item) && !/^po pobraniu/i.test(item))
+  return line || 'Opis zmian nie został dodany.'
+}
+
+function ReleaseNotes({ notes }: { notes: string }) {
+  const lines = String(notes || '').split('\n').map((line) => line.trim()).filter(Boolean)
+  if (!lines.length) return <p className="update-notes-empty">Opis zmian dla tego wydania nie został jeszcze dodany.</p>
+  return <div className="update-notes">
+    {lines.map((line, index) => line.startsWith('## ')
+      ? <strong key={`${line}-${index}`}>{line.slice(3)}</strong>
+      : <p key={`${line}-${index}`} className={line.startsWith('- ') ? 'update-note-item' : ''}>{line.replace(/^[-*]\s*/, '')}</p>)}
+  </div>
+}
+
 function App() {
   const studio = useStudio()
   const [view, setView] = usePersistentState<ViewId>('dubcut.view', 'home')
@@ -238,8 +255,8 @@ function App() {
               <div><span>Data wydania</span><b>{formatReleaseDate(update?.releaseDate ?? null)}</b></div>
             </div>
             <div className="update-section">
-              <h3>Release Notes</h3>
-              <pre className="update-notes">{update?.releaseNotes || 'Brak informacji dla tego wydania.'}</pre>
+              <h3>Co nowego w v{update?.latestVersion ?? update?.currentVersion ?? '—'}</h3>
+              <ReleaseNotes notes={update?.releaseNotes || ''} />
             </div>
             <div className="update-section">
               <h3>Historia wydań</h3>
@@ -247,7 +264,7 @@ function App() {
                 {update?.history?.length ? update.history.map((release) => (
                   <article key={`${release.version}-${release.publishedAt}`}>
                     <div><b>v{release.version}</b><span>{formatReleaseDate(release.publishedAt)}</span></div>
-                    {release.notes && <p>{release.notes}</p>}
+                    <p>{releaseSummary(release.notes)}</p>
                   </article>
                 )) : <p className="update-empty">Historia zostanie pobrana z GitHub Releases podczas sprawdzania aktualizacji.</p>}
               </div>
