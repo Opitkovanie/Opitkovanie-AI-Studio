@@ -1,7 +1,7 @@
 {
   "name": "opitkovanie-ai-studio",
   "private": true,
-  "version": "6.0.1",
+  "version": "6.0.2",
   "description": "Opitkovanie AI Studio – dubbing, shorty, napisy, muzyka, obraz i wideo lokalnie.",
   "author": "Opitkovanie",
   "repository": {
@@ -15,7 +15,7 @@
     "desktop": "npm run dev",
     "build": "tsc -b && vite build",
     "dist": "npm run build && electron-builder",
-    "release": "npm run build && electron-builder --publish never",
+    "release": "npm run build && electron-builder --mac --arm64 --publish never",
     "lint": "eslint .",
     "preview": "vite preview"
   },

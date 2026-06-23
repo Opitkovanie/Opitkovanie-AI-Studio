@@ -52,7 +52,7 @@ jobs:
         run: |
           TAG_VERSION="${{ inputs.version || github.ref_name }}"
           TAG_VERSION="${TAG_VERSION#v}"
-          APP_VERSION="$(node -p \"require('./package.json').version\")"
+          APP_VERSION="$(node -p "require('./package.json').version")"
           test "$TAG_VERSION" = "$APP_VERSION"
 
       - name: Install dependencies
