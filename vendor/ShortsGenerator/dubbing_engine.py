@@ -709,15 +709,16 @@ def _language_code(language):
     }.get(language)
 
 
-def _align_words_to_dub_audio(dub_audio_path, short, language, status_text=None, segments=None):
+def _align_words_to_dub_audio(dub_audio_path, short, language, status_text=None, segments=None, timeline_mode=False):
     """
     Align displayed subtitle words to the actual generated Qwen speech.
-    Whisper gives timings in concatenated-short time, so we map them back onto
-    original segment time because subtitle_engine expects source segment time.
+    Normal shorts are concatenated, so Whisper timings are mapped back from that
+    concatenated timeline. Custom long shorts keep their real timeline (including
+    pauses), where Whisper timings must be used directly.
 
     ``segments`` must be the SAME (possibly finer, TTS-split) list used to build
-    the dub track, so the concat offsets line up; the resulting word timings are
-    mapped to real source time and stay valid against the coarse scene segments.
+    the dub track. With ``timeline_mode=True`` their timestamps already match the
+    source timeline and are never shifted by removed pauses.
     """
     try:
         if status_text:
@@ -743,8 +744,8 @@ def _align_words_to_dub_audio(dub_audio_path, short, language, status_text=None,
             seg_start = float(seg.get("start_time", 0.0))
             seg_end = float(seg.get("end_time", seg_start + 0.1))
             seg_duration = max(0.1, seg_end - seg_start)
-            concat_start = concat_offset
-            concat_end = concat_offset + seg_duration
+            concat_start = seg_start if timeline_mode else concat_offset
+            concat_end = seg_end if timeline_mode else concat_offset + seg_duration
 
             desired_words = str(seg.get("text", "")).strip().split()
             if not desired_words:
@@ -776,7 +777,8 @@ def _align_words_to_dub_audio(dub_audio_path, short, language, status_text=None,
                 _rebuild_words_for_dub_segments(fallback_short)
                 aligned_words.extend(fallback_short.get("words", []))
 
-            concat_offset = concat_end
+            if not timeline_mode:
+                concat_offset = concat_end
 
         if aligned_words:
             short["words"] = aligned_words
@@ -1258,13 +1260,16 @@ def main():
     model_id = job.get("model_id", "k2-fsa/OmniVoice")
     ref_audio = job.get("ref_audio") or ""
     do_clone = bool(ref_audio and os.path.exists(ref_audio))
-    print(f"[TTS] Ladowanie OmniVoice {model_id} ({device}, klon={do_clone})...", flush=True)
+    def _load_model():
+        print(f"[TTS] Ladowanie OmniVoice {model_id} ({device}, klon={do_clone})...", flush=True)
+        return OmniVoice.from_pretrained(model_id, device_map=device, dtype=dtype, load_asr=do_clone)
+
     try:
         # load_asr is ON only when cloning: OmniVoice must transcribe the REFERENCE
         # sample itself to build a correct clone prompt. (Passing the target text as
         # ref_text — which we used to do — made the model speak gibberish, because the
         # reference audio and that text didn't match.)
-        model = OmniVoice.from_pretrained(model_id, device_map=device, dtype=dtype, load_asr=do_clone)
+        model = _load_model()
     except Exception as e:
         with open(RESULT_FILE, "w") as f:
             json.dump({"ok": False, "error": f"Nie mozna zaladowac OmniVoice: {e}"}, f)
@@ -1329,13 +1334,16 @@ def main():
     # always matches the SAMPLE regardless of its language — this is what fixes the
     # "made-up language" output. Settings (num_step=32, guidance_scale=2.0, denoise)
     # match the HF Space; postprocess_output (default on) trims silence + fades.
-    voice_prompt = None
-    if do_clone:
+    def _make_voice_prompt():
+        if not do_clone:
+            return None
         try:
-            voice_prompt = model.create_voice_clone_prompt(ref_audio=ref_audio, ref_text=None)
+            return model.create_voice_clone_prompt(ref_audio=ref_audio, ref_text=None)
         except Exception as e:
             print(f"[TTS] Prompt klonowania nieudany ({e}) — uzyje glosu wbudowanego.", flush=True)
-            voice_prompt = None
+            return None
+
+    voice_prompt = _make_voice_prompt()
 
     def _gen(txt, use_lang, use_instruct, seed=_SEED):
         # Re-seed before every segment so each line starts from a known RNG state —
@@ -1377,9 +1385,30 @@ def main():
             # clip for a segment even though it doesn't error — that's what made the dub
             # "go quiet after the first few lines". Detect it by RMS and retry with a
             # different seed (and progressively drop instruct/language) until we get real
-            # audio. This makes every spoken line actually come out.
+            # audio. Never accept the last silent fallback: it used to make a render
+            # appear successful while its narrator disappeared after the first seconds.
             audio = None
+            last_rms = 0.0
             for attempt in range(4):
+                if device == "mps":
+                    try:
+                        torch.mps.synchronize()
+                        torch.mps.empty_cache()
+                    except Exception:
+                        pass
+                if attempt == 3:
+                    # A fresh model instance is the reliable recovery when Metal keeps
+                    # returning silent tensors after otherwise valid inference calls.
+                    try:
+                        del model
+                        gc.collect()
+                        if device == "mps":
+                            torch.mps.empty_cache()
+                        model = _load_model()
+                        sr = int(model.sampling_rate or sr)
+                        voice_prompt = _make_voice_prompt()
+                    except Exception as reload_error:
+                        raise RuntimeError(f"Nie można ponownie załadować OmniVoice: {reload_error}")
                 sd = _SEED + attempt * 7919
                 ul = lang if attempt < 3 else None
                 ui = instruct if attempt == 0 else None
@@ -1388,14 +1417,14 @@ def main():
                 except Exception as e1:
                     print(f"[TTS] Segment {idx + 1} proba {attempt + 1} blad: {e1}", flush=True)
                     continue
-                rms = float(np.sqrt(np.mean(cand.astype(np.float64) ** 2))) if cand.size else 0.0
-                if cand.size and (rms >= 0.004 or len(txt) <= 2):
+                last_rms = float(np.sqrt(np.mean(cand.astype(np.float64) ** 2))) if cand.size else 0.0
+                peak = float(np.max(np.abs(cand))) if cand.size else 0.0
+                if cand.size >= int(sr * 0.08) and last_rms >= 0.004 and peak >= 0.012:
                     audio = cand
                     break
-                print(f"[TTS] Segment {idx + 1} prawie cichy (rms={rms:.4f}) — ponawiam (proba {attempt + 1}).", flush=True)
-                audio = cand  # keep last as fallback
+                print(f"[TTS] Segment {idx + 1} prawie cichy (rms={last_rms:.4f}) — ponawiam (proba {attempt + 1}).", flush=True)
             if audio is None or audio.size == 0:
-                audio = np.zeros(int(0.3 * sr), dtype=np.float32)
+                raise RuntimeError(f"OmniVoice zwrócił ciszę po 4 próbach (RMS={last_rms:.5f}).")
             sf.write(out_path, audio, sr)
         except Exception as e:
             errors.append(f"Segment {idx + 1}: {e}")
@@ -1651,7 +1680,10 @@ def build_dubbed_audio(source_video, short, project_id, short_index, settings, s
         _place_fit_on_timeline(fit_paths, segments, total_dur, dub_track)
     else:
         _concat_ready_wavs(fit_paths, dub_track)
-    _align_words_to_dub_audio(dub_track, short, language, status_text, segments=segments)
+    _align_words_to_dub_audio(
+        dub_track, short, language, status_text,
+        segments=segments, timeline_mode=custom_timeline,
+    )
 
     final_audio = audio_dir / f"final_mix_{lang_slug}.m4a"
     mode = settings.get("audio_mode", "Oryginalne audio")
