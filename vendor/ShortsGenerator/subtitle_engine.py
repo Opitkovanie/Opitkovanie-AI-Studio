@@ -296,7 +296,7 @@ def generate_viral_ass_subtitles(segments, global_words, output_ass_path, preset
                                  override_bcolor=None, override_hcolor=None, override_size=None, override_margin=None, auto_scale=False,
                                  override_hsize=None, override_out_color=None, override_out_thick=None, override_shad_color=None, override_shad_size=None,
                                  override_bold=None, override_italic=None, override_upper=None, override_words=None, override_mode=None, override_punct=None,
-                                 override_animation=None, override_bg_padding=None):
+                                 override_animation=None, override_bg_padding=None, timeline_mode=False):
     
     p = SUBTITLE_PRESETS.get(preset_name, SUBTITLE_PRESETS["Hormozi (Classic)"])
     
@@ -418,6 +418,7 @@ def generate_viral_ass_subtitles(segments, global_words, output_ass_path, preset
         # KRYTYCZNA POPRAWKA: Zapisanie przeprocesowanych bloków do głównej zmiennej, aby FFmpeg miał co nałożyć!
         processed_segments.append({
             'duration': seg_duration,
+            'start_time': float(seg_start),
             'chunks': chunks
         })
 
@@ -461,6 +462,11 @@ Style: Default,{ass_fontname},{base_size},{base_color},&H00000000,{out_color},{s
     for p_seg in processed_segments:
         chunks = p_seg['chunks']
         seg_duration = p_seg['duration']
+        # Standard Shorts are concatenated during rendering, so their subtitle clock
+        # advances scene by scene. A custom full-film Short keeps the source timeline;
+        # using the concatenated clock there removed every real pause and made captions
+        # race through the film at the start.
+        segment_base_time = p_seg['start_time'] if timeline_mode else current_short_time
 
         for chunk_idx, chunk in enumerate(chunks):
             if not chunk: continue
@@ -469,8 +475,8 @@ Style: Default,{ass_fontname},{base_size},{base_color},&H00000000,{out_color},{s
             if use_mode == "fade":
                 line_text = " ".join([w['word'] for w in chunk])
                 line_text = f"{{\\fad(200,200)\\fs{base_size}\\c{base_color}}}{line_text}"
-                start_str = seconds_to_ass_time(current_short_time + chunk[0]['rel_start'])
-                end_str = seconds_to_ass_time(current_short_time + chunk[-1]['rel_end'] + 0.1)
+                start_str = seconds_to_ass_time(segment_base_time + chunk[0]['rel_start'])
+                end_str = seconds_to_ass_time(segment_base_time + chunk[-1]['rel_end'] + 0.1)
                 clean_text = line_text.strip().replace('\n', '\\N').replace('\\n', '\\N')
                 pos_tag = f"{{\\an8\\pos({pos_x},{pos_y})}}"
                 ass_content += f"Dialogue: 0,{start_str},{end_str},Default,,0,0,0,,{pos_tag}{clean_text}\n"
@@ -654,8 +660,8 @@ Style: Default,{ass_fontname},{base_size},{base_color},&H00000000,{out_color},{s
                 else: 
                     line_text = " ".join([w['word'] for w in chunk])
                 
-                start_str = seconds_to_ass_time(current_short_time + start_time)
-                end_str = seconds_to_ass_time(current_short_time + end_time)
+                start_str = seconds_to_ass_time(segment_base_time + start_time)
+                end_str = seconds_to_ass_time(segment_base_time + end_time)
                 pos_tag = f"{{\\an8\\pos({pos_x},{pos_y})}}"
                 
                 if isinstance(line_text, tuple):
@@ -668,7 +674,8 @@ Style: Default,{ass_fontname},{base_size},{base_color},&H00000000,{out_color},{s
                     clean_text = line_text.strip().replace('\n', '\\N').replace('\\n', '\\N')
                     ass_content += f"Dialogue: 0,{start_str},{end_str},Default,,0,0,0,,{pos_tag}{clean_text}\n"
 
-        current_short_time += seg_duration
+        if not timeline_mode:
+            current_short_time += seg_duration
 
     with open(output_ass_path, "w", encoding="utf-8") as f:
         f.write(ass_content)

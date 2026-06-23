@@ -908,7 +908,8 @@ def get_shorts_preview(filename: str):
 
 
 def _build_short_ass(settings: Dict[str, Any], segments: List[Dict[str, Any]],
-                     words: List[Dict[str, Any]], ass_path: str, aspect_ratio: str):
+                     words: List[Dict[str, Any]], ass_path: str, aspect_ratio: str,
+                     *, timeline_mode: bool = False):
     """Generate the ASS subtitle file from our sub_* settings — single source of truth
     shared by the live preview and the full render so they look identical."""
     from subtitle_engine import generate_viral_ass_subtitles  # type: ignore
@@ -937,6 +938,7 @@ def _build_short_ass(settings: Dict[str, Any], segments: List[Dict[str, Any]],
         override_punct=bool(settings.get("sub_punct")),
         override_animation=_animation_code(settings.get("sub_animation")),
         override_bg_padding=_num(settings.get("sub_bg_pad")),
+        timeline_mode=timeline_mode,
     )
 
 
@@ -2894,7 +2896,10 @@ def shorts_render_dub(req: ShortsDubRenderRequest) -> Dict[str, Any]:
         ass_arg = None
         if s.get("enable_subtitles", True) and version_short.get("segments"):
             ctx.progress(0.66, "Budowanie napisów dla wersji językowej…")
-            _build_short_ass(s, version_short.get("segments", []), version_short.get("words", []), str(ass_path), aspect_ratio)
+            _build_short_ass(
+                s, version_short.get("segments", []), version_short.get("words", []), str(ass_path), aspect_ratio,
+                timeline_mode=bool(custom_video_segments),
+            )
             ass_arg = str(ass_path)
 
         logo_path = _resolve_logo_path(s.get("logo_path"))
