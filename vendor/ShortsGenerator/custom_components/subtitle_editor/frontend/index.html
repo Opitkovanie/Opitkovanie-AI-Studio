@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Subtitle Editor Component</title>
+  <style>
+    :root {
+      --bg-color: transparent;
+      --card-bg: rgba(30, 30, 30, 0.8);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --card-focus: rgba(16, 185, 129, 0.8);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --input-bg: rgba(0, 0, 0, 0.2);
+    }
+    body {
+      margin: 0;
+      padding: 5px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .word-block {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 140px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .word-block:focus-within {
+      border-color: var(--card-focus);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+      transform: translateY(-2px);
+    }
+    .word-input {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+      outline: none;
+      text-align: center;
+      transition: color 0.2s;
+    }
+    .word-input:focus {
+      color: #10b981;
+    }
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .time-input {
+      background: var(--input-bg);
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      width: 55px;
+      font-size: 12px;
+      text-align: center;
+      outline: none;
+      padding: 3px 0;
+      transition: all 0.2s;
+    }
+    .time-input:focus {
+      border-color: var(--card-focus);
+      color: var(--text-main);
+      background: rgba(0,0,0,0.4);
+    }
+    .time-separator {
+      font-size: 10px;
+      opacity: 0.5;
+    }
+    .break-badge {
+      font-size: 10px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      padding: 2px 6px;
+      border-radius: 4px;
+      align-self: center;
+      margin-bottom: 4px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="root" style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; padding-bottom: 20px;"></div>
+
+  <script>
+    function sendMessageToStreamlitClient(type, data) {
+      if (window.parent !== window) {
+        window.parent.postMessage({ isStreamlitMessage: true, type: type, ...data }, "*");
+      }
+    }
+
+    function setFrameHeight() {
+      const height = document.body.scrollHeight;
+      sendMessageToStreamlitClient("streamlit:setFrameHeight", { height: height });
+    }
+
+    function sendDataToStreamlit() {
+      sendMessageToStreamlitClient("streamlit:setComponentValue", { value: wordsData, dataType: "json" });
+    }
+
+    let isInitialized = false;
+    let wordsData = [];
+
+    function renderEditor() {
+      const root = document.getElementById("root");
+      root.innerHTML = "";
+
+      wordsData.forEach((w, i) => {
+        const block = document.createElement("div");
+        block.className = "word-block";
+        
+        const badge = document.createElement("div");
+        badge.className = "break-badge";
+        badge.innerText = "↵ Nowa linia (Enter do usunięcia)";
+        
+        let initialWordText = w.word;
+        if (typeof initialWordText === "string" && initialWordText.includes('\n')) {
+            badge.style.display = "block";
+            initialWordText = initialWordText.replace('\n', '');
+        }
+        
+        const textInput = document.createElement("input");
+        textInput.className = "word-input";
+        textInput.type = "text";
+        textInput.value = initialWordText;
+
+        textInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const val = textInput.value;
+            const hasNewline = wordsData[i].word && wordsData[i].word.includes('\n');
+            if (!hasNewline) {
+              wordsData[i].word = val + '\n';
+              badge.style.display = "block";
+            } else {
+              wordsData[i].word = val.replace('\n', '');
+              badge.style.display = "none";
+            }
+            sendDataToStreamlit();
+          }
+        });
+
+        textInput.oninput = (e) => {
+          const hasNewline = wordsData[i].word && wordsData[i].word.includes('\n');
+          wordsData[i].word = e.target.value + (hasNewline ? '\n' : '');
+          sendDataToStreamlit();
+        };
+
+        const timeRow = document.createElement("div");
+        timeRow.className = "time-row";
+
+        const startInput = document.createElement("input");
+        startInput.className = "time-input";
+        startInput.type = "number";
+        startInput.step = "0.01";
+        startInput.value = w.start !== undefined ? parseFloat(w.start).toFixed(2) : "0.00";
+        startInput.onchange = (e) => {
+          wordsData[i].start = parseFloat(e.target.value);
+          sendDataToStreamlit();
+        };
+
+        const endInput = document.createElement("input");
+        endInput.className = "time-input";
+        endInput.type = "number";
+        endInput.step = "0.01";
+        endInput.value = w.end !== undefined ? parseFloat(w.end).toFixed(2) : "0.00";
+        endInput.onchange = (e) => {
+          wordsData[i].end = parseFloat(e.target.value);
+          sendDataToStreamlit();
+        };
+
+        const sep = document.createElement("span");
+        sep.className = "time-separator";
+        sep.innerText = "▶";
+
+        timeRow.appendChild(startInput);
+        timeRow.appendChild(sep);
+        timeRow.appendChild(endInput);
+
+        block.appendChild(badge);
+        block.appendChild(textInput);
+        block.appendChild(timeRow);
+        root.appendChild(block);
+      });
+
+      setTimeout(setFrameHeight, 50);
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "streamlit:render") {
+        const args = event.data.args;
+        if (!isInitialized && args.words) {
+          wordsData = args.words;
+          renderEditor();
+          isInitialized = true;
+          // Synchronize back initial clean data
+          sendDataToStreamlit();
+        }
+        setFrameHeight();
+      }
+    });
+
+    // Notify ready
+    sendMessageToStreamlitClient("streamlit:componentReady", { apiVersion: 1 });
+
+    window.addEventListener("resize", setFrameHeight);
+    setInterval(setFrameHeight, 500);
+  </script>
+</body>
+</html>

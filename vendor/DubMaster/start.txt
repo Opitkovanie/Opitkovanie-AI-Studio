@@ -1,0 +1,12 @@
+Kliknij dwukrotnie:
+
+install_dubmaster.command
+
+Instalator sam zainstaluje Homebrew, Python 3.11, ffmpeg i biblioteki aplikacji.
+Na koniec utworzy lokalne srodowisko .venv w folderze DubMaster.
+
+Potem aplikacje uruchamiasz przez:
+
+run_dubmaster.command
+
+Folder DubMaster moze byc w dowolnym miejscu.

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import qwen_tts; print\\(qwen_tts.__file__\\)\")",
+      "Read(//usr/**)",
+      "Bash(python3 -c \" from qwen_tts import Qwen3TTSModel import inspect src = inspect.getsource\\(Qwen3TTSModel.generate_voice_clone\\) print\\(src[-2000:]\\) \")",
+      "Bash(python3 -c \" from qwen_tts.core.tokenizer_25hz.modeling_qwen3_tts_tokenizer_v1 import Qwen3TTSTokenizerV1Model import inspect src = inspect.getsource\\(Qwen3TTSTokenizerV1Model.decode\\) print\\(src\\) \")",
+      "Bash(python3 -c \" from qwen_tts import Qwen3TTSTokenizer import inspect src = inspect.getsource\\(Qwen3TTSTokenizer.decode\\) print\\(src\\) \")",
+      "Bash(python3 -m json.tool)"
+    ]
+  }
+}

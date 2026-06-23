@@ -1,0 +1,263 @@
+╔══════════════════════════════════════════════════════════════════╗
+║           DUBMASTER — INSTRUKCJA INSTALACJI (macOS)             ║
+║           Wymagany komputer: Mac z Apple Silicon (M1/M2/M3/M4)  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+UWAGA: Aplikacja NIE działa na Macu z procesorem Intel, Windows ani Linux.
+       Wymagany jest Mac z chipem Apple Silicon (M1, M2, M3 lub M4).
+
+NAJPROSTSZA INSTALACJA:
+  1. Umieść folder DubMaster w dowolnym miejscu.
+  2. Kliknij dwukrotnie install_dubmaster.command.
+  3. Po instalacji uruchamiaj aplikację przez run_dubmaster.command.
+
+Instalator tworzy lokalne środowisko .venv w folderze aplikacji, więc nie trzeba
+ręcznie przechodzić przez kroki poniżej. Ręczna instrukcja zostaje jako awaryjna.
+
+
+══════════════════════════════════════════════════════════════════
+CZĘŚĆ 1 — LISTA WSZYSTKICH WYMAGANYCH KOMPONENTÓW
+══════════════════════════════════════════════════════════════════
+
+SYSTEM:
+  • macOS 13 Ventura lub nowszy
+  • Mac z Apple Silicon (M1 / M2 / M3 / M4)
+  • min. 16 GB RAM (zalecane 32 GB)
+  • min. 20 GB wolnego miejsca na dysku (modele AI zajmują ~8 GB)
+
+NARZĘDZIA SYSTEMOWE:
+  • Xcode Command Line Tools   — kompilator i git (wymagany przez Python)
+  • Homebrew                   — menedżer pakietów dla macOS
+  • ffmpeg                     — obróbka audio/wideo (wymagany przez pipeline)
+  • Python 3.11                — interpreter Pythona (przez Homebrew)
+
+BIBLIOTEKI PYTHON:
+  • streamlit                  — interfejs webowy aplikacji
+  • yt-dlp                     — pobieranie filmów z YouTube
+  • certifi                    — certyfikaty SSL (fix dla macOS)
+  • requests                   — zapytania HTTP (tłumaczenie Gemini)
+  • demucs                     — separacja głosu od tła (AI)
+  • mlx-whisper                — transkrypcja mowy (Apple MLX, tylko M-chip)
+  • soundfile                  — odczyt/zapis plików WAV
+  • torch                      — PyTorch (silnik ML)
+  • torchaudio                 — audio dla PyTorch
+  • qwen_tts                   — synteza mowy Qwen3-TTS
+  • numpy                      — obliczenia numeryczne
+
+MODELE AI (pobierają się automatycznie przy pierwszym uruchomieniu):
+  • mlx-community/whisper-large-v3-mlx   — ~1.5 GB  (transkrypcja)
+  • Qwen/Qwen3-TTS-12Hz-1.7B-Base        — ~3.5 GB  (synteza głosu)
+  • htdemucs (wbudowany w demucs)        — ~0.08 GB (separacja audio)
+
+PLIKI APLIKACJI:
+  • app.py                     — główny plik aplikacji
+  • cookies.txt                — sesja YouTube (opcjonalny, dołączony)
+
+
+══════════════════════════════════════════════════════════════════
+CZĘŚĆ 2 — INSTALACJA KROK PO KROKU (Terminal macOS)
+══════════════════════════════════════════════════════════════════
+
+Otwórz aplikację "Terminal" (Finder → Aplikacje → Narzędzia → Terminal)
+i wykonuj polecenia po kolei. Każde polecenie wklejasz i zatwierdzasz Enter.
+Poczekaj aż każde polecenie się zakończy zanim przejdziesz do następnego.
+
+──────────────────────────────────────────────────────────────────
+KROK 1 — Xcode Command Line Tools (kompilator)
+──────────────────────────────────────────────────────────────────
+
+xcode-select --install
+
+  → Pojawi się okno systemowe — kliknij "Zainstaluj" i poczekaj (~5 min).
+  → Jeśli pojawi się komunikat "already installed" — wszystko OK, idź dalej.
+
+──────────────────────────────────────────────────────────────────
+KROK 2 — Homebrew (menedżer pakietów)
+──────────────────────────────────────────────────────────────────
+
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  → Instalacja trwa 2-5 minut.
+  → Na końcu Terminal wyświetli dwie linijki zaczynające się od "echo" i "eval".
+    SKOPIUJ JE I WYKONAJ — dodają Homebrew do PATH. Wyglądają tak:
+
+      echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+      eval "$(/opt/homebrew/bin/brew shellenv)"
+
+  → Sprawdź czy Homebrew działa:
+
+brew --version
+
+──────────────────────────────────────────────────────────────────
+KROK 3 — ffmpeg (obróbka audio/wideo)
+──────────────────────────────────────────────────────────────────
+
+brew install ffmpeg
+
+  → Instalacja trwa 3-10 minut (pobiera ~300 MB zależności).
+  → Sprawdź czy działa:
+
+ffmpeg -version
+
+──────────────────────────────────────────────────────────────────
+KROK 4 — Python 3.11
+──────────────────────────────────────────────────────────────────
+
+brew install python@3.11
+
+  → Po instalacji ustaw Python 3.11 jako domyślny:
+
+echo 'export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"' >> ~/.zprofile
+source ~/.zprofile
+
+  → Sprawdź wersję:
+
+python3.11 --version
+
+──────────────────────────────────────────────────────────────────
+KROK 5 — Pip (aktualizacja)
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install --upgrade pip
+
+──────────────────────────────────────────────────────────────────
+KROK 6 — Streamlit (interfejs aplikacji)
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install streamlit
+
+──────────────────────────────────────────────────────────────────
+KROK 7 — yt-dlp i certifi i requests
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install yt-dlp certifi requests
+
+──────────────────────────────────────────────────────────────────
+KROK 8 — PyTorch i torchaudio (silnik ML)
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install torch torchaudio
+
+──────────────────────────────────────────────────────────────────
+KROK 9 — Demucs (separacja głosu od tła)
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install demucs
+
+──────────────────────────────────────────────────────────────────
+KROK 10 — mlx-whisper (transkrypcja mowy — tylko Apple Silicon)
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install mlx-whisper
+
+──────────────────────────────────────────────────────────────────
+KROK 11 — soundfile i numpy
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install soundfile numpy
+
+──────────────────────────────────────────────────────────────────
+KROK 12 — Qwen3-TTS (synteza głosu AI)
+──────────────────────────────────────────────────────────────────
+
+python3.11 -m pip install qwen_tts
+
+  → Jeśli pojawi się błąd "not found", spróbuj:
+
+python3.11 -m pip install git+https://github.com/QwenLM/Qwen3-TTS.git
+
+──────────────────────────────────────────────────────────────────
+KROK 13 — Przejdź do folderu aplikacji i uruchom
+──────────────────────────────────────────────────────────────────
+
+  Zastąp /ścieżka/do/folderu rzeczywistą ścieżką gdzie masz app.py.
+  Najłatwiej: przeciągnij folder z Findera do Terminala po wpisaniu "cd ".
+
+cd /ścieżka/do/folderu/DubMaster
+
+  → Uruchom aplikację:
+
+python3.11 -m streamlit run app.py
+
+  → Terminal wyświetli adres np. http://localhost:8501
+  → Otwórz ten adres w przeglądarce Safari lub Chrome.
+  → Aplikacja jest gotowa do użycia.
+
+
+══════════════════════════════════════════════════════════════════
+CZĘŚĆ 3 — PIERWSZE URUCHOMIENIE (co się pobiera automatycznie)
+══════════════════════════════════════════════════════════════════
+
+Przy pierwszej transkrypcji (~1.5 GB):
+  → mlx-whisper pobierze model Whisper large-v3 do ~/.cache/huggingface/
+  → Trwa kilka minut zależnie od internetu.
+
+Przy pierwszym generowaniu dubbingu (~3.5 GB):
+  → Qwen3-TTS pobierze model 1.7B do ~/.cache/huggingface/
+  → Trwa kilka minut zależnie od internetu.
+
+Przy pierwszym uruchomieniu Demucs (~80 MB):
+  → Model htdemucs pobierze się automatycznie.
+
+ŁĄCZNIE: ~5 GB przy pierwszym użyciu. Kolejne uruchomienia są natychmiastowe.
+
+
+══════════════════════════════════════════════════════════════════
+CZĘŚĆ 4 — KLUCZ API GEMINI (do tłumaczenia)
+══════════════════════════════════════════════════════════════════
+
+Tłumaczenie wymaga bezpłatnego klucza API Google Gemini:
+
+1. Wejdź na: https://aistudio.google.com/apikey
+2. Zaloguj się kontem Google
+3. Kliknij "Create API Key"
+4. Skopiuj klucz (zaczyna się od "AIza...")
+5. Wklej go w aplikacji w menu bocznym → "Zaawansowane opcje AI" → "Klucz API Gemini"
+6. Klucz zapisuje się automatycznie w pliku config.json
+
+
+══════════════════════════════════════════════════════════════════
+CZĘŚĆ 5 — SKRÓT DO URUCHAMIANIA (opcjonalnie)
+══════════════════════════════════════════════════════════════════
+
+Żeby nie wpisywać komendy za każdym razem, utwórz alias:
+
+echo 'alias dubmaster="cd /ścieżka/do/folderu/DubMaster && python3.11 -m streamlit run app.py"' >> ~/.zprofile
+source ~/.zprofile
+
+  → Od teraz wystarczy wpisać w Terminalu:
+
+dubmaster
+
+
+══════════════════════════════════════════════════════════════════
+CZĘŚĆ 6 — ROZWIĄZYWANIE PROBLEMÓW
+══════════════════════════════════════════════════════════════════
+
+PROBLEM: "command not found: brew"
+  → Wykonaj ponownie krok 2 i nie pomiń linii z "eval".
+
+PROBLEM: "command not found: ffmpeg"
+  → Uruchom: brew install ffmpeg
+
+PROBLEM: "No module named 'mlx_whisper'"
+  → Uruchom: python3.11 -m pip install mlx-whisper
+
+PROBLEM: "No module named 'qwen_tts'"
+  → Uruchom: python3.11 -m pip install qwen_tts
+  → Lub wersję z GitHub: python3.11 -m pip install git+https://github.com/QwenLM/Qwen3-TTS.git
+
+PROBLEM: Aplikacja otwiera się ale transkrypcja nie działa
+  → Sprawdź czy mlx-whisper jest zainstalowany: python3.11 -c "import mlx_whisper; print('OK')"
+
+PROBLEM: Port 8501 zajęty
+  → Uruchom na innym porcie: python3.11 -m streamlit run app.py --server.port 8502
+
+PROBLEM: Brak pamięci RAM podczas generowania
+  → Zamknij inne aplikacje (szczególnie przeglądarki i Xcode)
+  → Zamknij inne aplikacje i uruchom ponownie DubMaster. Aplikacja używa modelu Qwen3-TTS 1.7B.
+
+
+══════════════════════════════════════════════════════════════════
+Stworzone dla DubMaster by Opitkovanie
+══════════════════════════════════════════════════════════════════

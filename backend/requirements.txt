@@ -1,0 +1,4 @@
+# DubCut Studio — full engine stack. API layer is installed separately.
+-r requirements-common.txt
+-r requirements-shorts.txt
+-r requirements-dubmaster.txt

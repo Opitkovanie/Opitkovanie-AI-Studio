@@ -1,0 +1,7 @@
+# Runtime Python requirements for the Streamlit wrapper.
+# Python itself must be 3.11 or newer; Install.command installs Python 3.11 via uv.
+# LTX MLX dependencies are installed from vendor/ltx-2-mlx by scripts/setup.sh.
+huggingface-hub>=1.0.0
+streamlit>=1.50.0
+pillow>=11.0.0
+mflux>=0.17.5

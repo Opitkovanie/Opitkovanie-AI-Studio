@@ -1,0 +1,25 @@
+# DubMaster runtime requirements.
+# System requirements installed by install_dubmaster.command:
+# - macOS on Apple Silicon
+# - Xcode Command Line Tools
+# - Homebrew
+# - Python 3.11
+# - ffmpeg
+streamlit
+yt-dlp
+certifi
+requests
+numpy
+soundfile
+mlx-whisper
+torch
+torchaudio
+torchcodec
+demucs
+transformers
+accelerate
+sentencepiece
+safetensors
+streamlit-mic-recorder
+audio-recorder-streamlit
+qwen_tts

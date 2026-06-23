@@ -1,0 +1,4 @@
+# DubCut Studio — native backend API layer (always required, lightweight).
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7

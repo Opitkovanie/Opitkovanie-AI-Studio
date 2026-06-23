@@ -1,0 +1,17 @@
+[project]
+name = "local-ltx-studio"
+version = "0.1.0"
+description = "Local Streamlit UI for LTX 2.3 on Apple Silicon"
+requires-python = ">=3.11"
+dependencies = [
+    "huggingface-hub>=1.0.0",
+    "streamlit>=1.50.0",
+    "pillow>=11.0.0",
+    "mflux>=0.17.5",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = []

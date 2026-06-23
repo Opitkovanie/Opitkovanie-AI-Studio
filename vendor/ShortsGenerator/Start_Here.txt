@@ -1,0 +1,154 @@
+================================================================
+  AI ViralCutter by Opitkovanie — Instrukcja instalacji (Mac)
+================================================================
+
+WYMAGANIA SPRZĘTOWE:
+  - Mac z Apple Silicon (M1 / M2 / M3 / M4) — zalecany
+  - Minimum 16 GB RAM (zalecane 24 GB+)
+  - Minimum 10 GB wolnego miejsca na dysku
+  - macOS Ventura 13+ lub nowszy
+
+================================================================
+  CZĘŚĆ 1 — CO TRZEBA ZAINSTALOWAĆ
+================================================================
+
+1. HOMEBREW
+   Menedżer pakietów dla macOS. Wymagany do instalacji ffmpeg i Pythona.
+   https://brew.sh
+
+2. PYTHON 3.11
+   Wymagana dokładnie ta wersja (3.11). Inne wersje mogą powodować błędy.
+
+3. FFMPEG
+   Silnik do przetwarzania wideo i audio. Niezbędny do generowania shortów,
+   konwersji formatów i ekstrakcji audio przed transkrypcją.
+
+4. BIBLIOTEKI PYTHON (pip):
+
+   a) streamlit             — interfejs użytkownika aplikacji (web UI)
+   b) google-genai          — integracja z Gemini AI (analiza wideo, hashtagi)
+   c) yt-dlp               — pobieranie filmów z YouTube
+   d) faster-whisper        — transkrypcja głosu (fallback dla innych platform)
+   e) mlx-whisper          — transkrypcja głosu zoptymalizowana pod Apple Silicon
+                             (używa Metal GPU — znacznie szybsza niż CPU)
+   f) opencv-python         — analiza wideo, śledzenie twarzy (Face Tracking)
+   g) ultralytics           — model YOLO do detekcji twarzy (Face Tracking)
+   h) Pillow                — precyzyjne pozycjonowanie napisów
+
+5. KLUCZ API GOOGLE GEMINI
+   Wymagany do analizy transkrypcji i generowania shortów przez AI.
+   Pobierz bezpłatnie na: https://aistudio.google.com/apikey
+   Wpisz go w aplikacji w lewym panelu → zakładka AI → pole "Klucz API".
+
+================================================================
+  CZĘŚĆ 2 — KOMENDY DO WKLEJENIA W TERMINALU
+================================================================
+  Wykonuj po kolei. Każda komenda musi zakończyć się bez błędu
+  zanim przejdziesz do następnej.
+================================================================
+
+--- KROK 1: Instalacja Homebrew ---
+
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+
+--- KROK 2: Dodanie Homebrew do PATH (wymagane po instalacji) ---
+
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+
+--- KROK 3: Instalacja Pythona 3.11 przez Homebrew ---
+
+brew install python@3.11
+
+
+--- KROK 4: Instalacja FFmpeg ---
+
+brew install ffmpeg
+
+
+--- KROK 5: Weryfikacja instalacji (sprawdź czy wyjście pokazuje wersje) ---
+
+python3.11 --version
+ffmpeg -version
+
+
+--- KROK 6: Aktualizacja pip ---
+
+python3.11 -m pip install --upgrade pip
+
+
+--- KROK 7: Instalacja bibliotek Python ---
+
+python3.11 -m pip install streamlit
+
+python3.11 -m pip install google-genai
+
+python3.11 -m pip install yt-dlp
+
+python3.11 -m pip install faster-whisper
+
+python3.11 -m pip install mlx-whisper
+
+python3.11 -m pip install opencv-python
+
+python3.11 -m pip install ultralytics
+
+python3.11 -m pip install Pillow
+
+
+--- KROK 8 (opcjonalny): Wszystkie biblioteki jedną komendą ---
+
+  Zamiast kroków 7 powyżej możesz wkleić to wszystko naraz:
+
+python3.11 -m pip install streamlit google-genai yt-dlp faster-whisper mlx-whisper opencv-python ultralytics Pillow
+
+
+================================================================
+  CZĘŚĆ 3 — URUCHAMIANIE APLIKACJI
+================================================================
+
+SPOSÓB 1 — Dwuklik (najwygodniejszy):
+  Kliknij dwukrotnie plik "start.command" w folderze aplikacji.
+  Jeśli Mac pyta o uprawnienia, idź do:
+  Ustawienia systemowe → Prywatność i bezpieczeństwo → "Otwórz mimo to"
+
+SPOSÓB 2 — Terminal:
+  cd /ścieżka/do/folderu/aplikacji
+  python3.11 -m streamlit run app.py
+
+  Aplikacja otworzy się automatycznie w przeglądarce pod adresem:
+  http://localhost:8501
+
+
+================================================================
+  UWAGI I ROZWIĄZYWANIE PROBLEMÓW
+================================================================
+
+• PIERWSZE URUCHOMIENIE WHISPER:
+  Przy pierwszej transkrypcji aplikacja pobierze model mlx-whisper
+  (~800 MB). To jednorazowe — kolejne uruchomienia będą szybkie.
+
+• FACE TRACKING (śledzenie twarzy):
+  Model YOLO (~6 MB) pobiera się automatycznie przy pierwszym użyciu
+  tej funkcji. Nie trzeba nic robić ręcznie.
+
+• COOKIES.TXT (wymagany do YouTube):
+  Plik cookies.txt musi znajdować się w folderze aplikacji.
+  Aby go wygenerować:
+  1. Zaloguj się na YouTube w przeglądarce Chrome lub Firefox
+  2. Zainstaluj rozszerzenie "Get cookies.txt LOCALLY"
+  3. Wejdź na youtube.com i wyeksportuj cookies
+  4. Zapisz plik jako "cookies.txt" w folderze aplikacji
+
+• BŁĄD "command not found: python3.11":
+  Zamknij Terminal, otwórz ponownie i powtórz od Kroku 2.
+
+• BŁĄD UPRAWNIEŃ start.command:
+  chmod +x /ścieżka/do/aplikacji/start.command
+
+• AKTUALIZACJA yt-dlp (gdy YouTube przestaje działać):
+  python3.11 -m pip install --upgrade yt-dlp
+
+================================================================

@@ -1,0 +1,72 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Wersja SemVer bez prefiksu v, np. 6.0.1"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  macos-release:
+    runs-on: macos-latest
+    env:
+      # electron-builder reads this token only while publishing CI artifacts.
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set and commit dispatched version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ inputs.version }}"
+          node -e "if (!/^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$/.test(process.argv[1])) process.exit(1)" "$VERSION"
+          npm version "$VERSION" --no-git-tag-version
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Release v$VERSION"
+          git tag -a "v$VERSION" -m "Opitkovanie AI Studio v$VERSION"
+          git push origin HEAD:main --tags
+
+      - name: Validate release version
+        run: |
+          TAG_VERSION="${{ inputs.version || github.ref_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          APP_VERSION="$(node -p \"require('./package.json').version\")"
+          test "$TAG_VERSION" = "$APP_VERSION"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build installers and update metadata
+        run: npm run release
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release/*.dmg
+            release/*.zip
+            release/latest-mac.yml

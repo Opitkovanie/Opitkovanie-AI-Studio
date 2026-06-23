@@ -1,0 +1,22 @@
+# DubCut Studio — dependencies shared by Shorts and DubMaster.
+# yt-dlp is date-versioned and must track the newest release so YouTube keeps working.
+# Never pin a hard future minimum — the installer always upgrades it to the latest available.
+yt-dlp
+google-genai
+faster-whisper
+certifi
+requests
+numpy
+# Live CPU / RAM meters for the top bar.
+psutil
+
+# Apple Silicon Whisper acceleration.
+mlx-whisper; platform_system == "Darwin" and platform_machine == "arm64"
+
+# Local-first translation (replaces the paid Gemini dependency).
+# Argos = pure-CPU offline NMT (~50MB per language pair, downloaded to the
+# user's home on first use). langdetect = tiny source-language auto-detect.
+# NLLB-200 (best quality) needs no extra package here — it rides on the
+# transformers + torch stack installed with DubMaster.
+argostranslate
+langdetect

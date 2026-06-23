@@ -1,0 +1,7 @@
+# DubCut Studio — AI ViralCutter / Shorts-only dependencies.
+opencv-python
+ultralytics
+# Required by the ByteTrack/BoT-SORT object trackers (virtual AI camera). Without it
+# ultralytics tries to auto-pip it at runtime, which fails offline / in the packaged app.
+lap>=0.5.12
+Pillow

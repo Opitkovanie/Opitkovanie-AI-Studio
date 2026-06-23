@@ -1,0 +1,11 @@
+# DubCut Studio — DubMaster / dubbing-only dependencies.
+soundfile
+torch
+torchaudio
+torchcodec
+demucs
+transformers
+accelerate
+sentencepiece
+safetensors
+qwen_tts

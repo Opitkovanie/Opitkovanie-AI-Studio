@@ -1,0 +1,17 @@
+Najprostszy start na innym Macu:
+
+1. Otworz folder aplikacji.
+2. Uruchom Install.command.
+3. Po instalacji uruchom start.command.
+
+Adres aplikacji po starcie:
+http://localhost:8501
+
+Gdy macOS blokuje pliki .command po skopiowaniu:
+xattr -cr /sciezka/do/folderu/ShortsGenerator
+chmod +x /sciezka/do/folderu/ShortsGenerator/Install.command
+chmod +x /sciezka/do/folderu/ShortsGenerator/start.command
+
+Reczny start z Terminala, jesli jest potrzebny:
+cd /sciezka/do/folderu/ShortsGenerator
+./.venv/bin/python -m streamlit run app.py

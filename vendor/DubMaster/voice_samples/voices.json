@@ -1,0 +1,67 @@
+{
+  "voices": [
+    {
+      "id": "fcb2e9163403",
+      "name": "Trump 1",
+      "source_type": "plik",
+      "original_name": "Voicy_KAMALA YOUR FIRED (TRUMP).mp3",
+      "path": "voice_samples/fcb2e9163403/voice.wav",
+      "created_at": "2026-04-28 20:49",
+      "duration": 20.0
+    },
+    {
+      "id": "21540fc486fb",
+      "name": "Krystian 1",
+      "source_type": "plik",
+      "original_name": "Krystian.ogg",
+      "path": "voice_samples/21540fc486fb/voice.wav",
+      "created_at": "2026-04-28 20:55",
+      "duration": 16.69
+    },
+    {
+      "id": "b6be86e21acd",
+      "name": "Bartek 2",
+      "source_type": "mikrofon",
+      "original_name": "microphone.wav",
+      "path": "voice_samples/b6be86e21acd/voice.wav",
+      "created_at": "2026-04-28 21:05",
+      "duration": 20.22
+    },
+    {
+      "id": "4eeed385e51b",
+      "name": "Tomek 1",
+      "source_type": "plik",
+      "original_name": "Tomek.ogg",
+      "path": "voice_samples/4eeed385e51b/voice.wav",
+      "created_at": "2026-04-28 22:40",
+      "duration": 16.21
+    },
+    {
+      "id": "29922450a6bc",
+      "name": "Tomek 2",
+      "source_type": "plik",
+      "original_name": "Tomek 2.ogg",
+      "path": "voice_samples/29922450a6bc/voice.wav",
+      "created_at": "2026-04-28 22:52",
+      "duration": 22.95
+    },
+    {
+      "id": "aad6d3dc6841",
+      "name": "Tomek 3",
+      "source_type": "plik",
+      "original_name": "Tomek 3.ogg",
+      "path": "voice_samples/aad6d3dc6841/voice.wav",
+      "created_at": "2026-04-28 22:52",
+      "duration": 39.89
+    },
+    {
+      "id": "f6047bd829a3",
+      "name": "Kamila 1",
+      "source_type": "plik",
+      "original_name": "Pieczemy w Omni🥰 Czytaj zachcianki na dziko, brak sprzętu kuchennego ale i tak dałam radę 😂 #omnia_UqKypVsJwPw.mp4",
+      "path": "voice_samples/f6047bd829a3/voice.wav",
+      "created_at": "2026-04-29 08:32",
+      "duration": 172.43
+    }
+  ]
+}
