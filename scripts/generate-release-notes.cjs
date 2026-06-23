@@ -14,7 +14,7 @@ function describeChange(subject) {
   const text = String(subject || "").toLowerCase();
   if (/omnivoice|subtitle timing/.test(text)) return "Naprawiono ciągłość dubbingu OmniVoice i synchronizację napisów.";
   if (/qwen|silent dubbing/.test(text)) return "Naprawiono sytuację, w której dubbing mógł stać się cichy w trakcie filmu.";
-  if (/release notes|update.*display/.test(text)) return "Ulepszono okno aktualizacji oraz czytelność opisu zmian.";
+  if (/release notes|update.*(?:display|notes)|signing errors/.test(text)) return "Ulepszono okno aktualizacji, czytelność opisu zmian i komunikaty o podpisie aplikacji.";
   if (/public.*update|release workflow/.test(text)) return "Ulepszono automatyczne aktualizacje i publikację wydań.";
   return "Ulepszenia i poprawki stabilności aplikacji.";
 }
