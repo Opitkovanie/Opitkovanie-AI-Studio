@@ -949,10 +949,12 @@ def main():
         model_id = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
     else:
         model_id = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
-    print(f"[TTS] Ładowanie {model_id} ({device}, tryb={tts_mode})...", flush=True)
+    def _load_model():
+        print(f"[TTS] Ładowanie {model_id} ({device}, tryb={tts_mode})...", flush=True)
+        return Qwen3TTSModel.from_pretrained(model_id, device_map=device, dtype=dtype)
 
     try:
-        model = Qwen3TTSModel.from_pretrained(model_id, device_map=device, dtype=dtype)
+        model = _load_model()
     except Exception as e:
         with open(RESULT_FILE, "w") as f:
             json.dump({"ok": False, "error": f"Nie można załadować Qwen TTS: {e}"}, f)
@@ -1035,13 +1037,49 @@ def main():
                 sf.write(out_path, np.zeros(int(0.3 * 24000), dtype=np.float32), 24000)
                 continue
             win = float(durations[idx]) if idx < len(durations) else 5.0
-            # SINGLE generation per segment — the ORIGINAL fast path. The retry/split/long
-            # passes that lived here ran the TTS model 4-5x PER segment at much higher token
-            # budgets, which is exactly what made dubbing ~5-15x slower than the old
-            # ShortsGenerator (a 1-min short went from ~5 min to 20+ min). One clean pass per
-            # segment restores the old speed; tempo-fit + word-align downstream handle timing.
+            # A silent tensor is an MPS/Qwen failure mode: it produces a formally valid WAV
+            # after a few good segments, so an old build exported a movie whose narrator
+            # disappeared after ~10 seconds. Verify the signal before accepting it. A retry
+            # is cheap; after two silent results reload the model to reset MPS state.
             max_tok = min(1600, max(96, int(len(txt) * 1.4), int(win * 38)))
-            audio, sr = _gen(txt, max_tok, 0.58, 0.82)
+            last_rms = 0.0
+            for attempt in range(3):
+                if device == "mps":
+                    try:
+                        torch.mps.synchronize()
+                        torch.mps.empty_cache()
+                    except Exception:
+                        pass
+                if attempt == 2:
+                    # Reload only after two invalid attempts. This is deliberately rare,
+                    # but restores a poisoned Metal generation state instead of exporting
+                    # silence for the remainder of a long dub.
+                    try:
+                        del model
+                        gc.collect()
+                        if device == "mps":
+                            torch.mps.empty_cache()
+                        model = _load_model()
+                    except Exception as reload_error:
+                        raise RuntimeError(f"Nie można ponownie załadować Qwen TTS: {reload_error}")
+                seed = 12345 + idx * 1009 + attempt * 7919
+                random.seed(seed)
+                np.random.seed(seed)
+                torch.manual_seed(seed)
+                if device == "mps":
+                    try:
+                        torch.mps.manual_seed(seed)
+                    except Exception:
+                        pass
+                candidate, sr = _gen(txt, min(1600, max_tok + attempt * 96), 0.58 + attempt * 0.04, 0.82)
+                last_rms = float(np.sqrt(np.mean(candidate.astype(np.float64) ** 2))) if candidate.size else 0.0
+                peak = float(np.max(np.abs(candidate))) if candidate.size else 0.0
+                if candidate.size >= int(sr * 0.08) and last_rms >= 0.003 and peak >= 0.012:
+                    audio = candidate
+                    break
+                print(f"[TTS] Segment {idx + 1} jest cichy (rms={last_rms:.5f}) — ponawiam {attempt + 1}/3.", flush=True)
+            if audio is None:
+                raise RuntimeError(f"Qwen TTS zwrócił ciszę po 3 próbach (RMS={last_rms:.5f}).")
 
             # post-processing: trim leading silence, pad 60ms, fade in/out
             thr = 0.025
